@@ -1,0 +1,288 @@
+sds-inject-project/
+│
+├── automation/                             # Core Kubernetes automation
+│   ├── lib/
+│   │   ├── logging.sh                      # Structured logging (INFO/WARN/ERROR/DEBUG)
+│   │   ├── errors.sh                       # Error handling & cleanup hooks
+│   │   └── validation.sh                   # Pre-flight system validation
+│   │
+│   ├── common/
+│   │   ├── kernel-modules.sh               # Load overlay, br_netfilter, etc.
+│   │   ├── sysctl.sh                       # Configure kernel parameters
+│   │   ├── install-containerd.sh           # Container runtime installation
+│   │   └── install-kubernetes.sh           # K8s binaries (kubeadm, kubelet, kubectl)
+│   │
+│   ├── master/
+│   │   └── install-master.sh               # kubeadm init orchestration
+│   │
+│   ├── worker/
+│   │   └── install-worker.sh               # kubeadm join orchestration
+│   │
+│   └── runtime/
+│       └── detect.sh                       # Detect node type & installation state
+│
+├── binaries/                               # Binary artifacts (placeholder)
+│   ├── kubernetes/                         # kubeadm, kubelet, kubectl
+│   ├── helm/                               # Helm package manager
+│   ├── kustomize/                          # Kustomize configuration tool
+│   ├── crictl/                             # containerd CLI
+│   └── cni/                                # Container Network Interface plugins
+│
+├── packaging/                              # Package manifest & metadata
+│   ├── makeself/                           # makeself templates
+│   └── manifest/                           # manifest.json (versions, checksums)
+│
+├── ci/                                     # Continuous Integration
+│   ├── Jenkinsfile                         # Declarative Jenkins pipeline
+│   ├── test/                               # CI test scripts
+│   └── validation/                         # CI validation
+│
+├── cd/                                     # Continuous Deployment
+│   ├── deploy.sh                           # Remote deployment utility (SSH-based)
+│   └── reconcile.sh                        # State reconciliation & auto-remediation
+│
+├── configs/                                # Configuration templates
+│   ├── kubeadm-master.yaml                 # Master node kubeadm config
+│   ├── kubeadm-worker.yaml                 # Worker node kubeadm config
+│   └── containerd-config.toml              # containerd runtime config
+│
+├── tests/                                  # Testing infrastructure
+│   ├── unit/
+│   │   ├── logging-tests.sh                # Unit tests for logging library
+│   │   └── validation-tests.sh             # Unit tests for validation library
+│   │
+│   ├── integration/
+│   │   └── test-installer.sh               # Integration test scaffold
+│   │
+│   └── vm/
+│       └── Vagrantfile                     # Ubuntu 22.04 VM test environment
+│
+├── logs/                                   # Installation logs directory
+│       (created at runtime by installer)
+│
+├── dist/                                   # Build output
+│       k8s-installer.run                   (created by build.sh)
+│
+├── .gitignore                              # Git ignore patterns
+├── .env.example                            # Environment variables template
+├── Makefile                                # Build automation
+│       targets: help, clean, validate, lint, test, build, package, test-vm, ci-check, ci-build
+│
+├── installer-entrypoint.sh                 # Main installer entry point
+│       Usage: ./installer-entrypoint.sh [--master|--worker] [options]
+│
+├── build.sh                                # Build & packaging script
+│       Creates: dist/k8s-installer.run
+│       Generates: manifest.json with checksums
+│
+├── README.md                               # Comprehensive documentation (16K+)
+│       • Architecture overview
+│       • Repository structure
+│       • Requirements & prerequisites
+│       • Getting started guide
+│       • Build & package flow
+│       • CI/CD pipeline documentation
+│       • Testing procedures
+│       • Installation modes
+│       • Configuration guide
+│       • Troubleshooting section
+│       • Deployment examples
+│       • Security considerations
+│
+└── PROJECT_SUMMARY.txt                     # This summary
+
+================================================================================
+FILE STATISTICS
+================================================================================
+
+Total Directories: 27
+Total Files: 25
+Total Size: ~232KB (without binaries)
+
+Files by Type:
+  - Shell scripts (.sh): 17 files
+  - YAML configs (.yaml): 2 files
+  - TOML configs (.toml): 1 file
+  - Documentation (.md): 1 file
+  - Build files (Makefile): 1 file
+  - CI/CD (Jenkinsfile): 1 file
+  - VM config (Vagrantfile): 1 file
+  - Git ignore (.gitignore): 1 file
+
+================================================================================
+INSTALLATION FLOW DIAGRAM
+================================================================================
+
+User runs installer
+        ↓
+[Validate system]
+  ├─ OS check (Ubuntu 22.04)
+  ├─ Root access check
+  ├─ CPU/Memory/Disk check
+  ├─ Network connectivity
+  └─ Required commands check
+        ↓
+[Detect node type]
+  ├─ Is Kubernetes installed?
+  ├─ Is it master or worker?
+  └─ What's the current state?
+        ↓
+[Choose installation mode]
+  │
+  ├─→ [MASTER MODE]
+  │     ├─ Load kernel modules
+  │     ├─ Configure sysctl
+  │     ├─ Install containerd
+  │     ├─ Install Kubernetes packages
+  │     ├─ Run kubeadm init
+  │     └─ Setup kubectl access
+  │
+  ├─→ [WORKER MODE]
+  │     ├─ Load kernel modules
+  │     ├─ Configure sysctl
+  │     ├─ Install containerd
+  │     ├─ Install Kubernetes packages
+  │     ├─ Run kubeadm join
+  │     └─ Register with cluster
+  │
+  └─→ [AUTO MODE]
+        If uninitialized: Install as MASTER
+        If master: Warn about dangers
+        If worker: Offer upgrade options
+        ↓
+[Installation complete]
+  ├─ Logs saved to: logs/install-YYYYMMDD-HHMMSS.log
+  ├─ Node ready for workload deployment
+  └─ Verify: kubectl get nodes
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+BUILD COMMANDS:
+  make validate          # Syntax check all scripts
+  make lint              # Run shellcheck
+  make test              # Run unit tests
+  make build             # Create installer artifact
+  make test-vm           # Boot Vagrant VM and test
+  make clean             # Remove build artifacts
+
+INSTALLER MODES:
+  # Auto-detect and install
+  k8s-installer.run
+
+  # Install as master
+  k8s-installer.run --master
+
+  # Install as worker
+  k8s-installer.run --worker --master-ip 192.168.1.100 --join-token abc123
+
+  # Validate only (dry-run)
+  k8s-installer.run --validate-only
+
+  # Enable debug logging
+  DEBUG=1 k8s-installer.run --master
+
+DEPLOYMENT:
+  # Copy and run directly
+  scp dist/k8s-installer.run root@target:/tmp/
+  ssh root@target /tmp/k8s-installer.run --master
+
+  # Use deploy script
+  cd/deploy.sh --host 192.168.1.10 --mode master
+
+  # Reconciliation
+  cd/reconcile.sh
+
+VERIFICATION:
+  # Check logs
+  tail -f logs/install-*.log
+
+  # Check Kubernetes
+  kubectl get nodes
+  kubectl cluster-info
+  kubectl get pods -A
+
+  # Check services
+  systemctl status kubelet
+  systemctl status containerd
+
+================================================================================
+PRODUCTION DEPLOYMENT CHECKLIST
+================================================================================
+
+PRE-DEPLOYMENT:
+  ☐ Build installer: make build
+  ☐ Verify artifact: ls -lh dist/k8s-installer.run
+  ☐ Test on VM: make test-vm
+  ☐ Review configs in configs/ directory
+  ☐ Customize kubeadm YAML if needed
+  ☐ Plan network configuration
+  ☐ Allocate disk space (etcd, container images, logs)
+
+DEPLOYMENT:
+  ☐ Deploy master node first
+  ☐ Verify master is ready: kubectl get nodes
+  ☐ Deploy worker nodes with correct join token
+  ☐ Verify all nodes are Ready: kubectl get nodes -o wide
+
+POST-DEPLOYMENT:
+  ☐ Install CNI plugin (Calico, Flannel, etc.)
+  ☐ Configure RBAC policies
+  ☐ Configure Network Policies
+  ☐ Install monitoring (Prometheus/Grafana)
+  ☐ Setup centralized logging
+  ☐ Configure persistent storage
+  ☐ Test workload deployment
+  ☐ Document cluster access procedures
+  ☐ Setup backup procedures for etcd
+  ☐ Security audit and hardening
+
+OPERATIONS:
+  ☐ Monitor kubelet status
+  ☐ Check node readiness regularly
+  ☐ Maintain kernel and package updates
+  ☐ Archive installation logs
+  ☐ Document any manual changes
+  ☐ Test recovery procedures
+
+================================================================================
+ARCHITECTURE PRINCIPLES
+================================================================================
+
+MODULARITY:
+  ✓ Clear separation of concerns
+  ✓ Reusable library functions
+  ✓ Independent component scripts
+  ✓ Pluggable installation stages
+
+OBSERVABILITY:
+  ✓ Structured logging to file and stdout
+  ✓ Timestamped log entries
+  ✓ Configurable log levels
+  ✓ Log file paths tracked
+
+REPRODUCIBILITY:
+  ✓ Version-pinned components
+  ✓ Manifest generation with metadata
+  ✓ Configuration-driven installation
+  ✓ Makeself ensures consistency
+
+OPERATIONAL SAFETY:
+  ✓ Pre-flight validation checks
+  ✓ Graceful error handling
+  ✓ Cleanup hooks on exit
+  ✓ Trap handlers for signals
+  ✓ Idempotent installation scripts
+  ✓ State detection prevents re-init
+
+CI/CD INTEGRATION:
+  ✓ Declarative Jenkins pipeline
+  ✓ Automated validation
+  ✓ Artifact archival
+  ✓ Build history management
+  ✓ Timeout protection
+
+================================================================================
+END OF DIRECTORY TREE
+================================================================================

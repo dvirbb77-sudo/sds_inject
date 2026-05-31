@@ -1,0 +1,25 @@
+# kubeadm-worker.yaml - kubeadm configuration for worker node
+# Reference: https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm-join/
+
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: "master.example.com:6443"
+    token: "abcdef.0123456789abcdef"
+    unsafeSkipCAVerification: true
+    caCertHashes:
+      - "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+nodeRegistration:
+  name: "worker-node"
+  criSocket: "unix:///run/containerd/containerd.sock"
+  kubeletExtraArgs:
+    cloud-provider: external
+
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+failSwapOn: false
+maxPods: 110
+podsPerCore: 0

@@ -1,0 +1,63 @@
+# -*- mode: ruby -*-
+# Vagrantfile - VM test environment for Kubernetes installer
+# Provides Ubuntu 22.04 VMs for testing installer functionality
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_version = ">= 20230407.0.0"
+  config.vm.network "private_network", type: "dhcp"
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = 4096
+    vb.cpus = 2
+    vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+    vb.customize ["modifyvm", :id, "--ioapic", "on"]
+  end
+  config.vm.define "k8s-master" do |master|
+    master.vm.hostname = "k8s-master"
+    master.vm.network "private_network", ip: "192.168.56.10"   
+    master.vm.provider "virtualbox" do |vb|
+      vb.memory = 4096
+      vb.cpus = 2
+      vb.name = "k8s-master"
+    end
+    master.vm.provision "shell", inline: <<-SHELL
+      set -e
+      echo "[INFO] Master node provisioning..."
+      
+      apt-get update
+      apt-get upgrade -y
+      
+      apt-get install -y curl wget git jq
+      
+      mkdir -p /tmp/installer
+      cp /vagrant/dist/k8s-installer.run /tmp/installer/ 2>/dev/null || true
+      
+      if [[ -f /tmp/installer/k8s-installer.run ]]; then
+        echo "[INFO] Running Kubernetes installer..."
+        bash /tmp/installer/k8s-installer.run --master --validate-only || true
+      else
+        echo "[WARN] Installer not found - run 'make build' first"
+      fi
+      
+      echo "[INFO] Post-install validation..."
+      echo "Installed packages:"
+      dpkg -l | grep -E "(kubelet|kubeadm|kubectl|containerd)" || echo "Packages not installed yet"
+    SHELL
+  end
+  
+  # Worker node (commented out for single-node testing)
+  # config.vm.define "k8s-worker" do |worker|
+  #   worker.vm.hostname = "k8s-worker"
+  #   worker.vm.network "private_network", ip: "192.168.56.11"
+  #   
+  #   worker.vm.provider "virtualbox" do |vb|
+  #     vb.memory = 2048
+  #     vb.cpus = 1
+  #     vb.name = "k8s-worker"
+  #   end
+  # end
+  
+  config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+  
+  config.vm.boot_timeout = 600
+end

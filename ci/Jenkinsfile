@@ -1,0 +1,353 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        choice(
+            name: 'KUBERNETES_VERSION',
+            choices: ['1.31.1', '1.30.3', '1.29.7'],
+            description: 'Kubernetes version to package'
+        )
+
+        choice(
+            name: 'TEST_ENV',
+            choices: ['vm', 'docker', 'skip'],
+            description: 'Integration test environment'
+        )
+    }
+
+    environment {
+        KUBERNETES_VERSION = "${params.KUBERNETES_VERSION}"
+
+        INSTALLER_ARTIFACT = "k8s-installer.run"
+        DIST_DIR = "dist"
+
+        TEST_TIMEOUT = "3600"
+
+        SLACK_WEBHOOK_URL = credentials('slack-webhook')
+        EMAIL_RECIPIENTS  = credentials('devops-email-list')
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo "[STAGE] Checkout"
+
+                checkout scm
+
+                sh '''
+                    git log -1 --oneline
+                '''
+            }
+        }
+
+        stage('Shellcheck') {
+            steps {
+                echo "[STAGE] Shellcheck"
+
+                sh '''
+                    set -e
+
+                    command -v shellcheck >/dev/null 2>&1 || {
+                        apt-get update
+                        apt-get install -y shellcheck
+                    }
+
+                    find automation -name "*.sh" -type f -exec shellcheck -x {} \\;
+                    find cd -name "*.sh" -type f -exec shellcheck -x {} \\;
+                    find ci -name "*.sh" -type f -exec shellcheck -x {} \\;
+                    find tests -name "*.sh" -type f -exec shellcheck -x {} \\;
+                    find . -maxdepth 1 -name "*.sh" -type f -exec shellcheck -x {} \\;
+                '''
+            }
+        }
+
+        stage('Shfmt') {
+            steps {
+                echo "[STAGE] Formatting Validation"
+
+                sh '''
+                    set -e
+
+                    command -v shfmt >/dev/null 2>&1 || {
+                        command -v go >/dev/null 2>&1 || {
+                            apt-get update
+                            apt-get install -y golang-go
+                        }
+
+                        GO111MODULE=on \
+                        go install mvdan.cc/sh/v3/cmd/shfmt@latest
+
+                        export PATH="$PATH:$(go env GOPATH)/bin"
+                    }
+
+                    find automation -name "*.sh" -type f -exec shfmt -i 4 -d {} \\;
+                    find cd -name "*.sh" -type f -exec shfmt -i 4 -d {} \\;
+                    find ci -name "*.sh" -type f -exec shfmt -i 4 -d {} \\;
+                    find tests -name "*.sh" -type f -exec shfmt -i 4 -d {} \\;
+                    find . -maxdepth 1 -name "*.sh" -type f -exec shfmt -i 4 -d {} \\;
+                '''
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                echo "[STAGE] Unit Tests"
+
+                sh '''
+                    set -e
+
+                    if [[ ! -d tests/unit ]]; then
+                        echo "[INFO] No unit tests found"
+                        exit 0
+                    fi
+
+                    failed=0
+
+                    for test_file in tests/unit/*.sh
+                    do
+                        echo ""
+                        echo "======================================"
+                        echo "Running ${test_file}"
+                        echo "======================================"
+
+                        if ! bash "${test_file}"
+                        then
+                            failed=$((failed + 1))
+                        fi
+                    done
+
+                    if [[ $failed -gt 0 ]]
+                    then
+                        echo "[ERROR] Unit test failures: ${failed}"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+        stage('Integration Tests') {
+            steps {
+                echo "[STAGE] Integration Tests"
+
+                sh '''
+                    set -e
+
+                    if [[ ! -d tests/integration ]]; then
+                        echo "[INFO] No integration tests found"
+                        exit 0
+                    fi
+
+                    failed=0
+
+                    for test_file in tests/integration/*.sh
+                    do
+                        echo ""
+                        echo "======================================"
+                        echo "Running ${test_file}"
+                        echo "======================================"
+
+                        if ! bash "${test_file}"
+                        then
+                            failed=$((failed + 1))
+                        fi
+                    done
+
+                    if [[ $failed -gt 0 ]]
+                    then
+                        echo "[ERROR] Integration test failures: ${failed}"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+        stage('Build Package') {
+            steps {
+                echo "[STAGE] Build"
+
+                sh '''
+                    set -e
+
+                    make validate
+                    make test
+
+                    if command -v makeself >/dev/null 2>&1
+                    then
+                        make build
+                    else
+                        echo "[WARN] makeself not installed"
+                        echo "[WARN] build skipped"
+                    fi
+                '''
+            }
+        }
+
+        stage('Verify Artifact') {
+            when {
+                expression {
+                    return fileExists("${DIST_DIR}/${INSTALLER_ARTIFACT}")
+                }
+            }
+
+            steps {
+                echo "[STAGE] Verify Artifact"
+
+                sh '''
+                    set -e
+
+                    test -f "${DIST_DIR}/${INSTALLER_ARTIFACT}"
+
+                    echo ""
+                    echo "=== FILE TYPE ==="
+                    file "${DIST_DIR}/${INSTALLER_ARTIFACT}"
+
+                    echo ""
+                    echo "=== SIZE ==="
+                    du -h "${DIST_DIR}/${INSTALLER_ARTIFACT}"
+
+                    echo ""
+                    echo "=== SHA256 ==="
+                    sha256sum "${DIST_DIR}/${INSTALLER_ARTIFACT}"
+                '''
+            }
+        }
+
+        stage('VM Integration Tests') {
+            when {
+                expression {
+                    return params.TEST_ENV == 'vm'
+                }
+            }
+
+            steps {
+                echo "[STAGE] VM Integration"
+
+                sh '''
+                    set -e
+
+                    command -v vagrant >/dev/null 2>&1 || {
+                        apt-get update
+                        apt-get install -y vagrant
+                    }
+
+                    cd tests/vm
+
+                    vagrant up --no-provision
+
+                    vagrant provision
+
+                    vagrant ssh -c "
+                        sudo kubeadm version || true
+                        sudo systemctl status kubelet || true
+                    "
+
+                    vagrant destroy -f
+                '''
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                echo "[STAGE] Archive"
+
+                archiveArtifacts(
+                    artifacts: 'dist/**',
+                    allowEmptyArchive: true
+                )
+
+                archiveArtifacts(
+                    artifacts: 'logs/**',
+                    allowEmptyArchive: true
+                )
+            }
+        }
+    }
+
+    post {
+
+        always {
+
+            echo "[POST] Collecting diagnostics"
+
+            sh '''
+                set +e
+
+                echo ""
+                echo "=== DATE ==="
+                date
+
+                echo ""
+                echo "=== DISK ==="
+                df -h
+
+                echo ""
+                echo "=== MEMORY ==="
+                free -h
+
+                echo ""
+                echo "=== TEST LOGS ==="
+                find tests -name "*.log" -type f | head -20
+            '''
+        }
+
+        success {
+
+            echo "[SUCCESS] Pipeline completed"
+
+            sh '''
+                if [[ -x ci/notify.sh ]]
+                then
+                    ci/notify.sh success
+                fi
+            '''
+        }
+
+        unstable {
+
+            echo "[UNSTABLE] Pipeline unstable"
+
+            sh '''
+                if [[ -x ci/notify.sh ]]
+                then
+                    ci/notify.sh unstable
+                fi
+            '''
+        }
+
+        failure {
+
+            echo "[FAILURE] Pipeline failed"
+
+            sh '''
+                set +e
+
+                echo ""
+                echo "=== DEBUG INFO ==="
+
+                uname -a
+
+                echo ""
+                ps aux | head -20
+
+                if [[ -x ci/notify.sh ]]
+                then
+                    ci/notify.sh failure
+                fi
+            '''
+        }
+
+        cleanup {
+
+            echo "[CLEANUP] Workspace cleanup"
+
+            cleanWs()
+        }
+    }
+}

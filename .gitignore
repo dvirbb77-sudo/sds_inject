@@ -1,0 +1,66 @@
+# .gitignore - Git ignore patterns for Kubernetes installer project
+
+# Build artifacts
+/dist/
+/build/
+/payload/
+*.run
+
+# Binary artifacts
+/binaries/**/*.tar.gz
+/binaries/**/*.tar.bz2
+/binaries/**/*.zip
+
+# Test artifacts
+/tests/vm/.vagrant/
+/tests/vm/*.log
+.vagrant/
+
+# IDE/Editor
+.agents/
+.codex/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+/logs/
+*.log
+
+# Temporary files
+/tmp/
+*.tmp
+*.bak
+
+# OS specific
+thumbs.db
+.DS_Store
+Thumbs.db
+
+# Jenkins/CI
+.jenkins/
+*.groovy.lock
+
+# Package manager
+node_modules/
+*.gem
+*.egg-info/
+
+# SSH keys and secrets
+*.key
+*.pem
+.env
+.env.local
+secrets.yaml
+
+# Vagrant
+.vagrant
+*.box
+
+# Compiled files
+*.o
+*.so
+*.a
