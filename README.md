@@ -2,20 +2,29 @@
 
 # Kubernetes Self-Contained Installer
 
-A production-grade, enterprise-ready Kubernetes bootstrap automation framework that produces a **single self-executing installer artifact** capable of deploying complete Kubernetes environments on clean Ubuntu 22.04 systems.
+A Kubernetes bootstrap automation framework that produces a **single self-executing installer artifact** capable of deploying complete Kubernetes environments on clean Ubuntu 22.04 systems.
 
 ## Overview
 
 The Kubernetes Installer is a comprehensive automation platform designed for:
 
-- **Automated master node initialization** via kubeadm
-- **Automated worker node provisioning** with cluster join
-- **Upgrading/reinstalling worker nodes** in existing clusters
-- **Self-contained deployment** - no external dependencies required
-- **Offline installation** - all binaries bundled in single artifact
-- **Enterprise operations** - observability, validation, error handling
+- Automated master node initialization via kubeadm
+- Automated worker node provisioning with cluster join
+- Upgrading/reinstalling worker nodes in existing clusters
+- Self-contained deployment - no external dependencies required
+- Offline installation - all binaries bundled in single artifact
+- Enterprise operations - observability, validation, error handling
 
-The final deliverable is a single makeself-packaged `.run` file that operates completely offline and produces a production-ready Kubernetes cluster.
+The final deliverable is a single makeself-packaged .run file that operates completely offline and produces a production-ready Kubernetes cluster.
+
+## Key Features
+
+- Binary Acquisition: Automated download and caching of all required Kubernetes components
+- Smoke Testing: Post-installation validation to ensure cluster readiness
+- Multi-Node Support: Deploy master and worker nodes with Vagrant or production environment
+- Self-Healing: Automatic service recovery and drift detection
+- Structured Logging: Comprehensive, timestamped operation logs
+- Production Guide: Step-by-step deployment procedures with troubleshooting
 
 ## Architecture
 
@@ -59,61 +68,72 @@ The final deliverable is a single makeself-packaged `.run` file that operates co
 
 ```
 sds-inject-project/
-├── automation/                 # Core installation automation
-│   ├── lib/                   # Reusable libraries
-│   │   ├── logging.sh         # Structured logging framework
-│   │   ├── errors.sh          # Error handling & cleanup
-│   │   └── validation.sh      # Pre-flight checks
-│   ├── common/                # Shared installation steps
-│   │   ├── kernel-modules.sh  # Load kernel modules
-│   │   ├── sysctl.sh          # Configure sysctl
-│   │   ├── install-containerd.sh  # Container runtime
-│   │   └── install-kubernetes.sh  # K8s packages
-│   ├── master/                # Master node installation
-│   │   └── install-master.sh  # kubeadm init
-│   ├── worker/                # Worker node installation
-│   │   └── install-worker.sh  # kubeadm join
-│   └── runtime/               # Runtime utilities
-│       └── detect.sh          # Node state detection
+├── automation/
+│   ├── lib/
+│   │   ├── logging.sh
+│   │   ├── errors.sh
+│   │   ├── validation.sh
+│   │   └── healing.sh
+│   ├── common/
+│   │   ├── kernel-modules.sh
+│   │   ├── sysctl.sh
+│   │   ├── install-containerd.sh
+│   │   └── install-kubernetes.sh
+│   ├── master/
+│   │   └── install-master.sh
+│   ├── worker/
+│   │   └── install-worker.sh
+│   └── runtime/
+│       └── detect.sh
 │
-├── binaries/                  # (Placeholder) Binary artifacts
+├── binaries/
 │   ├── kubernetes/
 │   ├── helm/
 │   ├── kustomize/
 │   ├── crictl/
-│   └── cni/
+│   └── containerd/
 │
-├── packaging/                 # Package manifests
-│   ├── makeself/             # makeself templates
-│   └── manifest/             # Package metadata
+├── packaging/
+│   ├── makeself/
+│   └── manifest/
 │
-├── ci/                        # Continuous Integration
-│   ├── Jenkinsfile           # Jenkins pipeline
-│   ├── test/                 # CI test scripts
-│   └── validation/           # CI validation
+├── ci/
+│   ├── Jenkinsfile
+│   ├── notify.sh
+│   ├── notify-slack.sh
+│   ├── notify-email.sh
+│   ├── test/
+│   └── validation/
 │
-├── cd/                        # Continuous Deployment
-│   ├── deploy.sh             # Remote deployment utility
-│   └── reconcile.sh          # State reconciliation
+├── cd/
+│   ├── deploy.sh
+│   ├── reconcile.sh
+│   └── fetch-binaries.sh
 │
-├── configs/                   # Configuration templates
-│   ├── kubeadm-master.yaml   # Master kubeadm config
-│   ├── kubeadm-worker.yaml   # Worker kubeadm config
-│   └── containerd-config.toml # containerd runtime config
+├── configs/
+│   ├── kubeadm-master.yaml
+│   ├── kubeadm-worker.yaml
+│   └── containerd-config.toml
 │
-├── tests/                     # Testing infrastructure
-│   ├── unit/                 # Unit tests
-│   ├── integration/          # Integration tests
-│   └── vm/                   # VM test environment
-│       └── Vagrantfile       # Vagrant VM definition
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── smoke-test.sh
+│   └── vm/
+│       └── Vagrantfile
 │
-├── logs/                      # Runtime logs (created during install)
-├── dist/                      # Build output (created by build.sh)
-├── installer-entrypoint.sh   # Main installer entry point
-├── build.sh                  # Build/package script
-├── Makefile                  # Build automation
-├── README.md                 # This file
-└── .gitignore                # Git ignore patterns
+├── logs/
+├── dist/
+├── installer-entrypoint.sh
+├── build.sh
+├── Makefile
+├── README.md
+├── PRODUCTION_DEPLOYMENT.md
+├── IMPLEMENTATION_GUIDE.md
+├── HEALING_FRAMEWORK.md
+├── PROJECT_SUMMARY.txt
+├── START_HERE.md
+└── .gitignore
 ```
 
 ## Requirements
@@ -143,34 +163,65 @@ sds-inject-project/
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourorgan/sds-inject-project.git
-cd sds-inject-project
+git clone <repository-url>
+cd sds_inject_project
 ```
 
-### 2. Build Installer Package
+### 2. Prepare Build Environment
 
 ```bash
-# Validate scripts
-make validate
-
-# Run all checks (lint, test, build)
-make ci-build
-
-# Build installer artifact
-make build
-
-# Output: dist/k8s-installer.run
+sudo apt-get update
+sudo apt-get install -y bash jq curl wget shellcheck shfmt makeself vagrant virtualbox
 ```
 
-### 3. Deploy to System
+### 3. Download Kubernetes Binaries
+
+```bash
+make fetch-binaries
+
+cd/fetch-binaries.sh [--version VERSION] [--output DIR] [--verify-only]
+```
+
+Supported version overrides:
+
+```bash
+make fetch-binaries \
+  KUBERNETES_VERSION=1.30.0 \
+  HELM_VERSION=3.15.0 \
+  KUSTOMIZE_VERSION=5.3.0 \
+  CONTAINERD_VERSION=1.7.0 \
+  CRICTL_VERSION=1.28.0
+```
+
+### 4. Build Installer Package
+
+```bash
+make validate
+
+make ci-build
+
+make build
+```
+
+Output: dist/k8s-installer.run (approximately 1-2GB)
+
+### 5. Smoke Test (Optional)
+
+```bash
+bash tests/smoke-test.sh --master
+
+bash tests/smoke-test.sh --worker
+
+bash tests/smoke-test.sh --master --timeout 600
+```
+
+### 6. Deploy to System
 
 #### Option A: Local installation (master node)
 
 ```bash
-# Copy installer to target system
 scp dist/k8s-installer.run root@target-system:/tmp/
 
-# SSH to target and execute
 ssh root@target-system
 sudo /tmp/k8s-installer.run --master
 ```
@@ -178,10 +229,8 @@ sudo /tmp/k8s-installer.run --master
 #### Option B: Using deploy script (remote)
 
 ```bash
-# Deploy master
 cd/deploy.sh --host 192.168.1.10 --installer dist/k8s-installer.run --mode master
 
-# Deploy worker
 cd/deploy.sh \
   --host 192.168.1.11 \
   --installer dist/k8s-installer.run \
@@ -193,9 +242,24 @@ cd/deploy.sh \
 #### Option C: Reconciliation mode
 
 ```bash
-# Automatic detection and remediation
 ./cd/reconcile.sh
 ```
+
+### 7. Production Deployment
+
+For detailed production deployment procedures, refer to PRODUCTION_DEPLOYMENT.md:
+
+```bash
+cat PRODUCTION_DEPLOYMENT.md
+```
+
+This guide includes:
+- Phase-by-phase deployment steps
+- Time estimates and success criteria
+- Troubleshooting procedures
+- Rollback procedures
+- Post-installation verification
+- Monitoring and maintenance
 
 ## Build & Package Flow
 
@@ -269,13 +333,10 @@ dist/k8s-installer.run
 ### Running Locally
 
 ```bash
-# Install Jenkins-related tools
 apt-get install -y groovy
 
-# Validate Jenkinsfile syntax
 groovy -e 'new GroovyShell().evaluate(new File("ci/Jenkinsfile").text)'
 
-# Run equivalent of pipeline
 make ci-build
 ```
 
@@ -284,34 +345,70 @@ make ci-build
 ### Unit Tests
 
 ```bash
-# Run all unit tests
 make test
 
-# Run specific test
 bash tests/unit/validation-tests.sh
+bash tests/unit/logging-tests.sh
+bash tests/unit/detect-tests.sh
+bash tests/unit/installer-tests.sh
 ```
+
+### Smoke Testing
+
+After installation, verify the Kubernetes cluster:
+
+```bash
+bash tests/smoke-test.sh --master
+
+bash tests/smoke-test.sh --worker
+
+bash tests/smoke-test.sh --master --timeout 600
+```
+
+Smoke test checks:
+- Kubernetes installation verification
+- kubelet service status
+- containerd service status
+- kubeadm functionality
+- API server readiness (master)
+- Master node readiness (master)
+- Cluster information (master)
+- Node readiness (worker)
 
 ### VM Integration Tests
 
+Single-node testing:
+
 ```bash
-# Boot test VM and run installer
 make test-vm
 
-# Manual VM control
 cd tests/vm
-vagrant up              # Create and provision VMs
-vagrant ssh k8s-master  # SSH into master
-vagrant provision       # Re-run provisioning
-vagrant destroy         # Cleanup VMs
+vagrant up k8s-master
+vagrant ssh k8s-master
+vagrant provision k8s-master
+vagrant destroy k8s-master
+```
+
+Multi-node testing:
+
+```bash
+make test-vm-workers
+
+cd tests/vm
+vagrant up
+vagrant ssh k8s-master
+vagrant ssh k8s-worker-1
+vagrant ssh k8s-worker-2
+vagrant destroy -f
 ```
 
 ### Validation During Install
 
+Pre-installation validation:
+
 ```bash
-# Validate without installing
 /tmp/k8s-installer.run --validate-only
 
-# Install with debug logging
 DEBUG=1 /tmp/k8s-installer.run --master
 ```
 
@@ -360,10 +457,8 @@ k8s-installer.run \
 Determines current state and applies appropriate installation:
 
 ```bash
-# Automatic mode - detects and acts accordingly
 k8s-installer.run
 
-# Explicitly detect state
 ./cd/reconcile.sh
 ```
 
@@ -397,7 +492,6 @@ Runtime settings (`configs/containerd-config.toml`):
 ### Environment Variables
 
 ```bash
-# Override versions during build
 export KUBERNETES_VERSION=1.31.1
 export HELM_VERSION=3.16.1
 export KUSTOMIZE_VERSION=5.4.2
@@ -405,7 +499,6 @@ export CONTAINERD_VERSION=2.0.0
 
 make build
 
-# Override at install time
 export LOG_DIR=/var/log/k8s-install
 export DEBUG=1
 /tmp/k8s-installer.run --master
@@ -443,15 +536,12 @@ All installation operations produce structured, timestamped logs:
 
 **Solution**:
 ```bash
-# Check current memory
 free -h
 
-# Either allocate more resources or skip validation
-k8s-installer.run --validate-only  # Dry run
+k8s-installer.run --validate-only
 
-# Custom validation
 source automation/lib/validation.sh
-validate_memory 1024  # Check for 1GB instead of 2GB
+validate_memory 1024
 ```
 
 ### Network Issues
@@ -479,31 +569,24 @@ validate_memory 1024  # Check for 1GB instead of 2GB
 
 **Solution**:
 ```bash
-# Detect current state
 source automation/runtime/detect.sh
 get_node_type
 
-# If safe to reset
-kubeadm reset -f  # WARNING: Destructive!
-# Then re-run installer
+kubeadm reset -f
 ```
 
 ### Debug Installation
 
 ```bash
-# Enable debug logging
 DEBUG=1 k8s-installer.run --master
 
-# Show all installation steps
-set -x  # Before running installer
+set -x
 k8s-installer.run --master
 
-# Validate intermediate steps
 source automation/lib/logging.sh
 source automation/lib/validation.sh
 validate_all
 
-# Check individual services
 systemctl status kubelet
 systemctl status containerd
 kubectl get nodes
@@ -514,37 +597,28 @@ kubectl get nodes
 ### Post-Installation Verification
 
 ```bash
-# Check kubelet status
 sudo systemctl status kubelet
 
-# Verify kubeadm installed correctly
 kubeadm version
 
-# Check node readiness
 kubectl get nodes
 kubectl describe node $(hostname)
 
-# Verify cluster state
 kubectl cluster-info
 kubectl get cs
 
-# Check CNI status
 kubectl get daemonset -A
 ```
 
 ### Troubleshooting Commands
 
 ```bash
-# Kubelet logs
 journalctl -u kubelet -f
 
-# containerd logs
 journalctl -u containerd -f
 
-# API server logs
 tail -f /var/log/pods/kube-system_kube-apiserver-*/kube-apiserver/0.log
 
-# All system services
 systemctl --failed
 ```
 
@@ -553,7 +627,6 @@ systemctl --failed
 ### Single-Node Development Cluster
 
 ```bash
-# On clean Ubuntu 22.04 VM:
 scp dist/k8s-installer.run root@devbox:/tmp/
 ssh root@devbox
 /tmp/k8s-installer.run --master
@@ -563,10 +636,8 @@ kubectl get nodes
 ### Three-Node Cluster
 
 ```bash
-# Master
 k8s-installer.run --master
 
-# Workers (after master is ready)
 TOKEN=$(kubeadm token create)
 MASTER_IP=$(kubectl get node -o wide | grep master | awk '{print $6}')
 
@@ -583,15 +654,12 @@ done
 ### Multi-Cloud Deployment
 
 ```bash
-# AWS EC2
 aws ec2 run-instances --image-id ami-0c55b159cbfafe1f0 --instance-type t3.medium
 cd/deploy.sh --host <ec2-ip> --mode master
 
-# Azure VM
 az vm create --image UbuntuLTS
 cd/deploy.sh --host <azure-ip> --mode master
 
-# GCP Compute
 gcloud compute instances create k8s-node --image-family=ubuntu-2204-lts
 cd/deploy.sh --host <gcp-ip> --mode master
 ```
@@ -635,10 +703,9 @@ Guidelines for contributions:
 For production deployments:
 
 ```bash
-# After installation, apply security hardening
-kubectl apply -f configs/network-policy.yaml  # (Create this)
-kubectl apply -f configs/rbac-baseline.yaml   # (Create this)
-kubectl apply -f configs/pod-security.yaml    # (Create this)
+kubectl apply -f configs/network-policy.yaml
+kubectl apply -f configs/rbac-baseline.yaml
+kubectl apply -f configs/pod-security.yaml
 ```
 
 ## Support & Issues
@@ -648,9 +715,6 @@ kubectl apply -f configs/pod-security.yaml    # (Create this)
 - Logs: Check `logs/install-*.log` for detailed diagnostics
 - Debug: Use `DEBUG=1` environment variable
 
-## License
-
-[Specify your license - MIT, Apache 2.0, etc.]
 
 ## Changelog
 
@@ -666,4 +730,4 @@ kubectl apply -f configs/pod-security.yaml    # (Create this)
 
 **Last Updated**: 2026-05-26
 **Maintainer**: DevOps Team
-**Contact**: devops@example.com
+**Contact**: dvirbb77@gmail.com
