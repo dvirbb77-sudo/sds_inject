@@ -57,7 +57,7 @@ EOF
   swapoff -a >/dev/null 2>&1 || log_warn "Failed to disable swap (may not be present)"
   sed -i '/ swap / s/^/#/' /etc/fstab >/dev/null 2>&1 || log_warn "Failed to comment swap in fstab"
   
-  log_info "✓ sysctl configuration complete"
+  log_info " sysctl configuration complete"
   
   if [[ $failed -gt 0  ]]; then
     log_warn "Failed to apply $failed sysctl parameters"

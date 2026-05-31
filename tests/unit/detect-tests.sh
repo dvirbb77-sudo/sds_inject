@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# detect.sh - Detect cluster configuration and node type
+#
 #
 
 set -Eeuo pipefail

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# validation-tests.sh - Unit tests for validation library
+#
 #
 
 set -Eeuo pipefail
@@ -20,10 +20,10 @@ function assert_true() {
   test_count=$((test_count + 1))
   
   if eval "$command" &>/dev/null; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name"
+    echo " FAIL: $test_name"
     fail_count=$((fail_count + 1))
   fi
 }
@@ -35,10 +35,10 @@ function assert_false() {
   test_count=$((test_count + 1))
   
   if ! eval "$command" &>/dev/null; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name"
+    echo " FAIL: $test_name"
     fail_count=$((fail_count + 1))
   fi
 }
@@ -48,8 +48,8 @@ echo ""
 
 echo "Testing OS validation..."
 if [[ -f /etc/os-release ]]; then
-  source /etc/os-release
-  if [[ "$VERSION_ID" == "22.04" ]]; then
+  version_id=$(awk -F= '$1 == "VERSION_ID" { gsub(/"/, "", $2); print $2 }' /etc/os-release)
+  if [[ "$version_id" == "22.04" ]]; then
     assert_true "OS validation passes on Ubuntu 22.04" "validate_os"
   else
     assert_false "OS validation fails on non-22.04" "validate_os"
@@ -72,7 +72,6 @@ mem_mb=$((mem_kb / 1024))
 if [[ $mem_mb -ge 1024 ]]; then
   assert_true "Memory validation passes with sufficient RAM" "validate_memory 1024"
 else
-  # If not enough memory, should fail
   assert_false "Memory validation fails with insufficient RAM" "validate_memory 999999"
 fi
 
@@ -92,10 +91,10 @@ echo "Testing network validation..."
 validate_network || true
 pass_count=$((pass_count + 1))
 test_count=$((test_count + 1))
-echo "✓ PASS: Network validation (may warn but doesn't fail)"
+echo " PASS: Network validation (may warn but doesn't fail)"
 
 if [[ $test_count -eq 0 ]]; then
-  echo "✗ FAIL: No tests were executed"
+  echo " FAIL: No tests were executed"
   exit 1
 fi
 

@@ -125,7 +125,7 @@ main() {
     exit 1
   fi
   
-  echo "[INFO] ✓ Deployment complete"
+  echo "[INFO]  Deployment complete"
 }
 
 show_usage() {

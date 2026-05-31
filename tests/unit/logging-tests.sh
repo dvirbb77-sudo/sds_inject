@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# logging-tests.sh - Unit tests for logging library
+#
 #
 
 set -Eeuo pipefail
@@ -19,10 +19,10 @@ function assert_true() {
   test_count=$((test_count + 1))
   
   if eval "$command" &>/dev/null; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name"
+    echo " FAIL: $test_name"
     fail_count=$((fail_count + 1))
   fi
 }
@@ -54,7 +54,7 @@ assert_true "log file directory exists" "[[ -d \"\$(dirname \"$log_file\")\" ]]"
 assert_true "log entries have timestamps" "grep -q '\[202[0-9]-.*\]' \"\$(log_get_file)\""
 
 if [[ $test_count -eq 0 ]]; then
-  echo "✗ FAIL: No tests were executed"
+  echo " FAIL: No tests were executed"
   exit 1
 fi
 

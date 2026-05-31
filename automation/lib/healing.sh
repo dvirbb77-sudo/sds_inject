@@ -216,10 +216,10 @@ function validate_state() {
   log_debug "Validating state: $state_name"
   
   if eval "$validation_cmd" >/dev/null 2>&1; then
-    log_info "✓ $state_name validation passed"
+    log_info " $state_name validation passed"
     return 0
   else
-    log_warn "✗ $state_name validation failed"
+    log_warn " $state_name validation failed"
     return 1
   fi
 }

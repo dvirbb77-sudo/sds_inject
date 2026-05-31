@@ -60,7 +60,7 @@ main() {
     return 1
   fi
   
-  log_info "✓ containerd installation complete"
+  log_info " containerd installation complete"
   return 0
 }
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 #
-# detect.sh - Detect cluster configuration and node type
-# Determines if node is master/worker and current installation state
+#
 #
 
 set -Eeuo pipefail

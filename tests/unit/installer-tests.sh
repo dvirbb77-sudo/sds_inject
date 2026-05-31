@@ -22,10 +22,10 @@ function assert_exit_code() {
   eval "$command" || actual_code=$?
   
   if [[ "$expected_code" -eq "$actual_code" ]]; then
-    echo "✓ PASS: $test_name (exit code $actual_code)"
+    echo " PASS: $test_name (exit code $actual_code)"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name"
+    echo " FAIL: $test_name"
     echo "  Expected exit code: $expected_code"
     echo "  Got exit code:      $actual_code"
     fail_count=$((fail_count + 1))
@@ -44,10 +44,10 @@ function assert_output_contains() {
   output=$(eval "$command" 2>&1) || true
   
   if echo "$output" | grep -q "$expected_string"; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name"
+    echo " FAIL: $test_name"
     echo "  Expected to find: $expected_string"
     echo "  Output: $output"
     fail_count=$((fail_count + 1))
@@ -78,7 +78,7 @@ assert_output_contains "help mentions validate-only" "--validate-only" "./instal
 assert_exit_code "installer functions are callable" 0 "bash -c 'source automation/lib/logging.sh && source automation/runtime/detect.sh && type log_info && type get_node_type'"
 
 if [[ $test_count -eq 0 ]]; then
-  echo "✗ FAIL: No tests were executed"
+  echo " FAIL: No tests were executed"
   exit 1
 fi
 

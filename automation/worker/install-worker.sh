@@ -65,7 +65,7 @@ main() {
   
   systemctl start kubelet >> "$LOG_FILE" 2>&1
   
-  echo "[INFO] ✓ Worker node joined cluster" | tee -a "$LOG_FILE"
+  echo "[INFO]  Worker node joined cluster" | tee -a "$LOG_FILE"
   
   return 0
 }

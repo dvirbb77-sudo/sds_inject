@@ -61,7 +61,7 @@ main() {
     return 1
   fi
   
-  log_info "✓ Kubernetes installation complete"
+  log_info " Kubernetes installation complete"
   return 0
 }
 

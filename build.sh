@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 #
-# build.sh - Build self-contained Kubernetes installer artifact
-# Packages all binaries, configs, and scripts into makeself archive
 #
-# Produces: dist/k8s-installer.run
-#
-# Prerequisites:
-#  - makeself installed
-#  - all required binaries/configs in place
 #
 
 set -Eeuo pipefail
@@ -23,14 +16,6 @@ HELM_VERSION="${HELM_VERSION:-3.16.1}"
 KUSTOMIZE_VERSION="${KUSTOMIZE_VERSION:-5.4.2}"
 CONTAINERD_VERSION="${CONTAINERD_VERSION:-2.0.0}"
 CRICTL_VERSION="${CRICTL_VERSION:-1.29.0}"
-
-log_info() {
-  echo "[INFO] $*"
-}
-
-log_error() {
-  echo "[ERROR] $*" >&2
-}
 
 main() {
   log_info "Building Kubernetes installer package..."
@@ -107,7 +92,7 @@ EOF
   sha256=$(sha256sum "$installer" | awk '{print $1}')
   
   log_info "=========================================="
-  log_info "✓ Build complete!"
+  log_info " Build complete!"
   log_info "=========================================="
   log_info "Installer: $installer"
   log_info "Size: $size"
@@ -117,5 +102,12 @@ EOF
   return 0
 }
 
-main "$@"
+log_info() {
+  echo "[INFO] $*"
+}
 
+log_error() {
+  echo "[ERROR] $*" >&2
+}
+
+main "$@"

@@ -37,7 +37,7 @@ overlay
 br_netfilter
 EOF
   
-  log_info "✓ Kernel module configuration complete"
+  log_info " Kernel module configuration complete"
   
   if [[ $failed -gt 0  ]]; then
     log_warn "Failed to load $failed modules"

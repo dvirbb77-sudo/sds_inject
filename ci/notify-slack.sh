@@ -32,9 +32,9 @@ function _notify_slack_impl() {
   esac
   
   local title="${JOB_NAME} #${BUILD_NUMBER}"
-  [[ "$status" == "success" ]] && title="✓ $title PASSED"
-  [[ "$status" == "failure" ]] || [[ "$status" == "failed" ]] && title="✗ $title FAILED"
-  [[ "$status" == "unstable" ]] || [[ "$status" == "warning" ]] && title="⚠ $title UNSTABLE"
+  [[ "$status" == "success" ]] && title=" $title PASSED"
+  [[ "$status" == "failure" ]] || [[ "$status" == "failed" ]] && title=" $title FAILED"
+  [[ "$status" == "unstable" ]] || [[ "$status" == "warning" ]] && title=" $title UNSTABLE"
   
   local payload
   payload=$(cat <<EOF

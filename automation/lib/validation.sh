@@ -15,7 +15,7 @@ validate_root() {
     log_error "This script must be run as root"
     return 1
   fi
-  log_info "✓ Running as root"
+  log_info " Running as root"
   return 0
 }
 
@@ -33,7 +33,7 @@ validate_os() {
     return 1
   fi
   
-  log_info "✓ Ubuntu 22.04 verified"
+  log_info " Ubuntu 22.04 verified"
   return 0
 }
 
@@ -47,7 +47,7 @@ validate_cpu() {
     return 1
   fi
   
-  log_info "✓ CPU validation passed: $cpu_count cores"
+  log_info " CPU validation passed: $cpu_count cores"
   return 0
 }
 
@@ -62,7 +62,7 @@ validate_memory() {
     return 1
   fi
   
-  log_info "✓ Memory validation passed: ${available_mb}MB"
+  log_info " Memory validation passed: ${available_mb}MB"
   return 0
 }
 
@@ -77,7 +77,7 @@ validate_disk() {
     return 1
   fi
   
-  log_info "✓ Disk validation passed: ${available_gb}GB"
+  log_info " Disk validation passed: ${available_gb}GB"
   return 0
 }
 
@@ -89,7 +89,7 @@ validate_network() {
     return 0
   fi
   
-  log_info "✓ Network connectivity verified"
+  log_info " Network connectivity verified"
   return 0
 }
 
@@ -108,7 +108,7 @@ validate_required_commands() {
     return 1
   fi
   
-  log_info "✓ All required commands available"
+  log_info " All required commands available"
   return 0
 }
 
@@ -130,6 +130,6 @@ validate_all() {
     return 1
   fi
   
-  log_info "✓ All validations passed"
+  log_info " All validations passed"
   return 0
 }

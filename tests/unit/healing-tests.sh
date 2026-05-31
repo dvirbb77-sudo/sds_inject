@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 #
 #
@@ -22,10 +22,10 @@ function assert_success() {
   test_count=$((test_count + 1))
   
   if "$@" >/dev/null 2>&1; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name (command failed)"
+    echo " FAIL: $test_name (command failed)"
     fail_count=$((fail_count + 1))
   fi
 }
@@ -37,12 +37,52 @@ function assert_failure() {
   test_count=$((test_count + 1))
   
   if ! "$@" >/dev/null 2>&1; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name (command succeeded when it should have failed)"
+    echo " FAIL: $test_name (command succeeded when it should have failed)"
     fail_count=$((fail_count + 1))
   fi
+}
+
+function test_retry_stops_on_success() {
+  local attempt_file="$MOCK_DIR/retry-stops-attempts"
+  local attempt
+  printf '0\n' > "$attempt_file"
+  
+  if retry 3 1 bash -c "attempt=\$(cat \"\$1\"); attempt=\$((attempt + 1)); printf \"%s\\n\" \"\$attempt\" > \"\$1\"; [[ \$attempt -ge 2 ]]" _ "$attempt_file"; then
+    attempt=$(cat "$attempt_file")
+    if [[ $attempt -eq 2  ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+function test_command_success() {
+  local counter_file="$MOCK_DIR/eventually-succeeds-attempts"
+  printf '0\n' > "$counter_file"
+  
+  if retry 3 1 bash -c "counter=\$(cat \"\$1\"); counter=\$((counter + 1)); printf \"%s\\n\" \"\$counter\" > \"\$1\"; [[ \$counter -ge 2 ]]" _ "$counter_file"; then
+    return 0
+  fi
+  return 1
+}
+
+function test_exports() {
+  source "$SCRIPT_DIR/automation/lib/healing.sh" 2>/dev/null || true
+  
+  declare -f retry >/dev/null 2>&1 || return 1
+  declare -f ensure_service_running >/dev/null 2>&1 || return 1
+  declare -f ensure_service_enabled >/dev/null 2>&1 || return 1
+  declare -f ensure_package_installed >/dev/null 2>&1 || return 1
+  declare -f ensure_module_loaded >/dev/null 2>&1 || return 1
+  declare -f ensure_sysctl >/dev/null 2>&1 || return 1
+  declare -f validate_state >/dev/null 2>&1 || return 1
+  declare -f healing_summary >/dev/null 2>&1 || return 1
+  declare -f perform_healing_phase >/dev/null 2>&1 || return 1
+  
+  return 0
 }
 
 echo "=== Healing Framework Tests ==="
@@ -57,26 +97,14 @@ assert_success "retry succeeds on first attempt" \
 assert_failure "retry fails after max attempts exhausted" \
   retry 2 1 false
 
-function test_retry_stops_on_success() {
-  local attempt=0
-  function increment_and_fail() {
-    attempt=$((attempt + 1))
-    if [[ $attempt -ge 2  ]]; then
-      return 0
-    fi
-    return 1
-  }
-  
-  if retry 3 1 increment_and_fail; then
-    if [[ $attempt -eq 2  ]]; then
-      return 0
-    fi
-  fi
-  return 1
-}
-
-assert_success "retry stops after first success (doesn't retry unnecessarily)" \
-  test_retry_stops_on_success
+test_count=$((test_count + 1))
+if test_retry_stops_on_success >/dev/null 2>&1; then
+  echo " PASS: retry stops after first success (doesn't retry unnecessarily)"
+  pass_count=$((pass_count + 1))
+else
+  echo " FAIL: retry stops after first success (doesn't retry unnecessarily)"
+  fail_count=$((fail_count + 1))
+fi
 
 assert_failure "ensure_service_running fails for non-existent service" \
   ensure_service_running "nonexistent-test-service-12345"
@@ -105,46 +133,26 @@ assert_failure "perform_healing_phase fails for non-existent healing function" \
 assert_success "healing library loads independently" \
   bash -c "source $SCRIPT_DIR/automation/lib/healing.sh 2>/dev/null && [[ \$HEALING_LOADED -eq 1  ]]"
 
-function test_command_success() {
-  local counter=0
-  function eventually_succeeds() {
-    counter=$((counter + 1))
-    if [[ $counter -ge 2  ]]; then
-      return 0
-    fi
-    return 1
-  }
-  
-  if retry 3 1 eventually_succeeds; then
-    return 0
-  fi
-  return 1
-}
-
-assert_success "retry eventually succeeds after failures" \
-  test_command_success
+test_count=$((test_count + 1))
+if test_command_success >/dev/null 2>&1; then
+  echo " PASS: retry eventually succeeds after failures"
+  pass_count=$((pass_count + 1))
+else
+  echo " FAIL: retry eventually succeeds after failures"
+  fail_count=$((fail_count + 1))
+fi
 
 assert_failure "ensure_sysctl requires both param and value" \
   bash -c "source $SCRIPT_DIR/automation/lib/healing.sh 2>/dev/null && ensure_sysctl 'net.ipv4.ip_forward'"
 
-function test_exports() {
-  source "$SCRIPT_DIR/automation/lib/healing.sh" 2>/dev/null || true
-  
-  declare -f retry >/dev/null 2>&1 || return 1
-  declare -f ensure_service_running >/dev/null 2>&1 || return 1
-  declare -f ensure_service_enabled >/dev/null 2>&1 || return 1
-  declare -f ensure_package_installed >/dev/null 2>&1 || return 1
-  declare -f ensure_module_loaded >/dev/null 2>&1 || return 1
-  declare -f ensure_sysctl >/dev/null 2>&1 || return 1
-  declare -f validate_state >/dev/null 2>&1 || return 1
-  declare -f healing_summary >/dev/null 2>&1 || return 1
-  declare -f perform_healing_phase >/dev/null 2>&1 || return 1
-  
-  return 0
-}
-
-assert_success "healing library exports all required functions" \
-  test_exports
+test_count=$((test_count + 1))
+if test_exports >/dev/null 2>&1; then
+  echo " PASS: healing library exports all required functions"
+  pass_count=$((pass_count + 1))
+else
+  echo " FAIL: healing library exports all required functions"
+  fail_count=$((fail_count + 1))
+fi
 
 echo ""
 echo "=================="

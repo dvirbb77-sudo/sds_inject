@@ -1,13 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# test-installer.sh - Integration tests for installer
-# Validates core installation automation logic without full K8s deployment
 #
-# Tests cover:
-#  1. Installer help functionality
-#  2. Argument validation
-#  3. Validate-only mode
-#  4. Detection workflow
 #
 
 set -Eeuo pipefail
@@ -31,10 +24,10 @@ function assert_exit_code() {
   eval "$command" &>/dev/null || actual_code=$?
   
   if [[ "$expected_code" -eq "$actual_code" ]]; then
-    echo "✓ PASS: $test_name (exit code $actual_code)"
+    echo " PASS: $test_name (exit code $actual_code)"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name"
+    echo " FAIL: $test_name"
     echo "  Expected: $expected_code, Got: $actual_code"
     fail_count=$((fail_count + 1))
   fi
@@ -52,10 +45,10 @@ function assert_output_contains() {
   output=$(eval "$command" 2>&1) || true
   
   if echo "$output" | grep -q "$expected_string"; then
-    echo "✓ PASS: $test_name"
+    echo " PASS: $test_name"
     pass_count=$((pass_count + 1))
   else
-    echo "✗ FAIL: $test_name (expected string not found: $expected_string)"
+    echo " FAIL: $test_name (expected string not found: $expected_string)"
     fail_count=$((fail_count + 1))
   fi
 }
@@ -86,7 +79,7 @@ assert_exit_code "installer syntax valid" 0 "bash -n ./installer-entrypoint.sh"
 assert_exit_code "automation scripts syntax valid" 0 "bash -n automation/common/sysctl.sh && bash -n automation/common/kernel-modules.sh"
 
 if [[ $test_count -eq 0 ]]; then
-  echo "✗ FAIL: No tests were executed"
+  echo " FAIL: No tests were executed"
   exit 1
 fi
 

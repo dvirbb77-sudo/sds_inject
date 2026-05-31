@@ -50,8 +50,8 @@ function notify_slack() {
   local status="$1"
   local message="$2"
   
-  if [[ -f "$(dirname "${BASH_SOURCE[0]}")/notify-slack.sh" ]]; then
-    source "$(dirname "${BASH_SOURCE[0]}")/notify-slack.sh"
+  if [[ -f "ci/notify-slack.sh" ]]; then
+    source ci/notify-slack.sh
     _notify_slack_impl "$status" "$message"
   else
     log_notify "Slack backend not found - skipping"
@@ -62,8 +62,8 @@ function notify_email() {
   local status="$1"
   local message="$2"
   
-  if [[ -f "$(dirname "${BASH_SOURCE[0]}")/notify-email.sh" ]]; then
-    source "$(dirname "${BASH_SOURCE[0]}")/notify-email.sh"
+  if [[ -f "ci/notify-email.sh" ]]; then
+    source ci/notify-email.sh
     _notify_email_impl "$status" "$message"
   else
     log_notify "Email backend not found - skipping"

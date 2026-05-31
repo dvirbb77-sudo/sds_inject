@@ -116,7 +116,7 @@ main() {
   esac
   
   log_info "=========================================="
-  log_info "✓ Installation complete"
+  log_info " Installation complete"
   log_info "=========================================="
 }
 
